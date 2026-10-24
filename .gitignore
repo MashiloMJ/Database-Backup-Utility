@@ -1,0 +1,22 @@
+
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Environment and secrets
+.env
+appsettings.*.json
+
+# Database files and backups
+*.bak
+*.backup
+*.dump
+*.sql
