@@ -1,0 +1,44 @@
+
+@model IEnumerable<DatabaseBackupUtility.Web.Models.BackupJob>
+
+@{
+    ViewData["Title"] = "Backup Jobs";
+}
+
+<div class="container mt-4">
+    <h1>Backup Jobs</h1>
+    <p>View the backup jobs recorded by the utility.</p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            No backup jobs have been recorded yet.
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Database</th>
+                    <th>Created (UTC)</th>
+                    <th>Status</th>
+                    <th>Backup File</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in Model)
+                {
+                    <tr>
+                        <td>@job.Id</td>
+                        <td>@job.DatabaseName</td>
+                        <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@job.Status</td>
+                        <td>@(job.BackupFilePath ?? "Not created")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

@@ -1,0 +1,41 @@
+
+@{
+    ViewData["Title"] = "Create Backup Job";
+}
+
+<div class="container mt-4">
+    <h1>Create Backup Job</h1>
+
+    <p>Enter the name of the database you want to back up.</p>
+
+    <!-- Send the form data to the Create action in BackupJobsController. -->
+    <form asp-action="Create" method="post">
+
+        <!-- Display validation errors, if any. -->
+        <div asp-validation-summary="ModelOnly"
+             class="text-danger"></div>
+
+        <div class="mb-3">
+            <label for="DatabaseName" class="form-label">
+                Database Name
+            </label>
+
+            <!-- The name attribute identifies the value sent to the controller. -->
+            <input type="text"
+                   id="DatabaseName"
+                   name="DatabaseName"
+                   class="form-control"
+                   placeholder="e.g. DatabaseBackupUtilityDb"
+                   required />
+        </div>
+
+        <!-- Submit the form. -->
+        <button type="submit" class="btn btn-primary">
+            Create Job
+        </button>
+
+        <a asp-action="Index" class="btn btn-secondary">
+            Cancel
+        </a>
+    </form>
+</div>

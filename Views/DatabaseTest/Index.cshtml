@@ -1,0 +1,30 @@
+
+@{
+    ViewData["Title"] = "Database Connection Test";
+}
+
+<div class="container mt-5">
+    <h1>Database Connection Test</h1>
+
+    @if (ViewBag.IsConnected == true)
+    {
+        <div class="alert alert-success">
+            <h4>Connection Successful</h4>
+            <p>@ViewBag.ConnectionStatus</p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <h4>Connection Failed</h4>
+            <p>@ViewBag.ConnectionStatus</p>
+        </div>
+    }
+
+    <p>
+        <strong>Database:</strong> DatabaseBackupUtilityDb
+    </p>
+    <p>
+        <strong>Server:</strong> (localdb)\MSSQLLocalDB
+    </p>
+</div>
