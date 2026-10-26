@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using DatabaseBackupUtility.Web.Data;
+using DatabaseBackupUtility.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<UtilityDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register the SQL Server backup service with dependency injection.
+builder.Services.AddScoped<SqlServerBackupService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

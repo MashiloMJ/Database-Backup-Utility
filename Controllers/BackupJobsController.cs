@@ -2,6 +2,7 @@
 using DatabaseBackupUtility.Web.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DatabaseBackupUtility.Web.Services;
 
 namespace DatabaseBackupUtility.Web.Controllers;
 
@@ -11,10 +12,15 @@ public class BackupJobsController : Controller
     // Gives this controller access to our application database.
     private readonly UtilityDbContext _context;
 
+    // Handles the actual SQL Server backup operation.
+    private readonly SqlServerBackupService _backupService;
+
     // ASP.NET Core provides the database context automatically.
-    public BackupJobsController(UtilityDbContext context)
+    public BackupJobsController(UtilityDbContext context,
+        SqlServerBackupService backupService)
     {
         _context = context;
+        _backupService = backupService;
     }
 
     // Displays all backup jobs saved in SQL Server.
@@ -74,5 +80,82 @@ public class BackupJobsController : Controller
         // Return to the list of backup jobs after saving.
         return RedirectToAction(nameof(Index));
     }
+
+
+    // Runs a backup for an existing job.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RunBackup(int id)
+    {
+        // Find the selected job in the database.
+        var job = await _context.BackupJobs.FindAsync(id);
+
+        // Return to the list if the job does not exist.
+        if (job == null)
+        {
+            return NotFound();
+        }
+
+        // Prevent a second backup attempt while a job is marked Running.
+        if (job.Status == "Running")
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Mark the job as running before starting the operation.
+        job.Status = "Running";
+        job.ErrorMessage = null;
+        await _context.SaveChangesAsync();
+
+        try
+        {
+            // Store backup files in a folder inside the application directory.
+            string backupFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "Backups");
+
+            
+            // Check that the backup service was provided by ASP.NET Core.
+            if (_backupService == null)
+            {
+                throw new InvalidOperationException(
+                    "The SQL Server backup service was not initialized.");
+            }
+
+            // Check that the job has a database name.
+            if (string.IsNullOrWhiteSpace(job.DatabaseName))
+            {
+                throw new InvalidOperationException(
+                    "The backup job does not have a database name.");
+            }
+
+            // Create the real SQL Server backup file.
+            string backupPath = await _backupService.CreateBackupAsync(
+                job.DatabaseName,
+                backupFolder);
+
+
+            // Record the successful backup.
+            job.Status = "Completed";
+            job.BackupFilePath = backupPath;
+            job.ErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            // Mark the job as failed.
+            job.Status = "Failed";
+
+            // Save the full error, including the location in the code
+            // where the exception occurred.
+            job.ErrorMessage = ex.ToString();
+        }       
+
+        // Save the final status and any path or error message.
+        await _context.SaveChangesAsync();
+
+        // Return to the jobs list to display the result.
+        return RedirectToAction(nameof(Index));
+    }
+
 
 }

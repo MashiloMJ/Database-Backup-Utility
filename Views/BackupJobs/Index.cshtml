@@ -7,7 +7,7 @@
 
 <div class="container mt-4">
     <h1>Backup Jobs</h1>
-    <p>View the backup jobs recorded by the utility.</p>
+    <p>View and run database backup jobs.</p>
 
     @if (!Model.Any())
     {
@@ -25,8 +25,11 @@
                     <th>Created (UTC)</th>
                     <th>Status</th>
                     <th>Backup File</th>
+                    <th>Error</th>
+                    <th>Action</th>
                 </tr>
             </thead>
+
             <tbody>
                 @foreach (var job in Model)
                 {
@@ -36,6 +39,23 @@
                         <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                         <td>@job.Status</td>
                         <td>@(job.BackupFilePath ?? "Not created")</td>
+
+                        <!-- Display an error message if the backup failed. -->
+                        <td>@(job.ErrorMessage ?? "—")</td>
+
+                        <td>
+                            <!-- Send a POST request to run this backup job. -->
+                            <form asp-action="RunBackup"
+                                  asp-route-id="@job.Id"
+                                  method="post">
+
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm"
+                                        disabled="@(job.Status == "Running")">
+                                    Run Backup
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 }
             </tbody>

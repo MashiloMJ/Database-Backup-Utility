@@ -3,59 +3,73 @@ using Microsoft.Data.SqlClient;
 
 namespace DatabaseBackupUtility.Web.Services;
 
-// This service handles SQL Server database backups.
+// This service creates backup files for SQL Server databases.
 public class SqlServerBackupService
 {
-    // Creates a backup file for the specified SQL Server database.
+    // Store the connection string configured in appsettings.json.
+    private readonly string _connectionString;
+
+    // ASP.NET Core provides the application configuration.
+    public SqlServerBackupService(IConfiguration configuration)
+    {
+        _connectionString =
+            configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "The DefaultConnection connection string is missing.");
+    }
+
+    // Create a backup file and return its full path.
     public async Task<string> CreateBackupAsync(
         string databaseName,
         string backupFolder)
     {
-        // Create the folder if it does not exist.
+        // Validate the database name before building the SQL command.
+        if (string.IsNullOrWhiteSpace(databaseName) ||
+            databaseName.Length > 128)
+        {
+            throw new ArgumentException(
+                "Please provide a valid database name.");
+        }
+
+        // Create the folder if it does not already exist.
         Directory.CreateDirectory(backupFolder);
 
-        // Create a unique filename using the current date and time.
+        // Add a timestamp so each backup has a unique filename.
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
         string backupFile = Path.Combine(
             backupFolder,
             $"{databaseName}_{timestamp}.bak");
 
-        // Use parameters to safely handle the database name.
-        // SQL Server does not allow parameters for BACKUP DATABASE identifiers,
-        // so validate the name and quote it as a SQL identifier.
-        if (string.IsNullOrWhiteSpace(databaseName) ||
-            databaseName.Length > 128 ||
-            databaseName.Contains(']') ||
-            databaseName.Contains(';'))
-        {
-            throw new ArgumentException("Invalid database name.");
-        }
+        // Escape closing brackets in the SQL Server database identifier.
+        string safeDatabaseName = databaseName.Replace("]", "]]");
 
-        // SQL Server executes this command to create the backup.
+        
+        // Create a backup without compression because SQL Server Express
+        // does not support the COMPRESSION backup option.
         string sql = $"""
-            BACKUP DATABASE [{databaseName}]
+            BACKUP DATABASE [{safeDatabaseName}]
             TO DISK = @BackupFile
-            WITH INIT, COMPRESSION, STATS = 10;
+            WITH INIT, STATS = 10;
             """;
 
-        // This service currently uses the local SQL Server instance.
-        string connectionString =
-            @"Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True;";
 
+        // Connect using the connection string from appsettings.json.
         await using var connection =
-            new SqlConnection(connectionString);
+            new SqlConnection(_connectionString);
 
         await connection.OpenAsync();
 
+        // Prepare the backup command.
         await using var command = new SqlCommand(sql, connection);
 
-        // Pass the destination path as a parameter.
+        // Pass the file path as a SQL parameter.
         command.Parameters.AddWithValue("@BackupFile", backupFile);
 
-        // Execute the backup command.
+        // Ask SQL Server to create the backup file.
         await command.ExecuteNonQueryAsync();
 
-        // Return the path so the controller can save it in the job record.
+        // Return the path so the controller can record it.
         return backupFile;
     }
 }
