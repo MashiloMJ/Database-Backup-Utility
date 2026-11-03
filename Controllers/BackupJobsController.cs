@@ -157,5 +157,109 @@ public class BackupJobsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+        // Verifies an existing backup file.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyBackup(int id)
+    {
+        // Find the selected backup job in the database.
+        var job = await _context.BackupJobs.FindAsync(id);
+
+        // Check whether the backup job exists.
+        if (job == null)
+        {
+            return NotFound();
+        }
+
+        // Check whether a backup file has been created.
+        if (string.IsNullOrWhiteSpace(job.BackupFilePath))
+        {
+            job.ErrorMessage = "No backup file is available to verify.";
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            // Ask the backup service to verify the backup file.
+            bool isValid = await _backupService.VerifyBackupAsync(
+                job.BackupFilePath);
+
+            // Update the job status based on the verification result.
+            job.Status = isValid ? "Verified" : "Verification Failed";
+
+            // Clear any previous error message.
+            job.ErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            // Record that backup verification failed.
+            job.Status = "Verification Failed";
+
+            // Save the error message for troubleshooting.
+            job.ErrorMessage = ex.Message;
+        }
+
+        // Save the verification result in the database.
+        await _context.SaveChangesAsync();
+
+        // Return to the backup jobs list.
+        return RedirectToAction(nameof(Index));
+    }
+
+    
+    // Restores an existing backup into a separate test database.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RestoreBackup(int id)
+    {
+        // Find the selected backup job.
+        var job = await _context.BackupJobs.FindAsync(id);
+
+        // Check whether the job exists.
+        if (job == null)
+        {
+            return NotFound();
+        }
+
+        // Make sure a backup file is available.
+        if (string.IsNullOrWhiteSpace(job.BackupFilePath))
+        {
+            job.ErrorMessage = "No backup file is available to restore.";
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            // Choose a separate database for our C# restore test.
+            string destinationDatabase = "DatabaseBackupUtility_CSharpTest";
+
+            // Call the restore method in SqlServerBackupService.
+            await _backupService.RestoreBackupAsync(
+                job.BackupFilePath,
+                destinationDatabase);
+
+            // Record the successful restore.
+            job.Status = "Restored";
+            job.ErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            // Record that the restore operation failed.
+            job.Status = "Restore Failed";
+            job.ErrorMessage = ex.Message;
+        }
+
+        // Save the restore result.
+        await _context.SaveChangesAsync();
+
+        // Return to the backup jobs list.
+        return RedirectToAction(nameof(Index));
+    }
+
+
 
 }

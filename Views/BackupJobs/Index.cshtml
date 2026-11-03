@@ -46,13 +46,38 @@
                         <td>
                             <!-- Send a POST request to run this backup job. -->
                             <form asp-action="RunBackup"
-                                  asp-route-id="@job.Id"
-                                  method="post">
+                                asp-route-id="@job.Id"
+                                method="post"
+                                class="mb-2">
 
                                 <button type="submit"
                                         class="btn btn-primary btn-sm"
                                         disabled="@(job.Status == "Running")">
                                     Run Backup
+                                </button>
+                            </form>
+
+                            <!-- Send a POST request to verify the backup file. -->
+                            <form asp-action="VerifyBackup"
+                                asp-route-id="@job.Id"
+                                method="post">
+
+                                <button type="submit"
+                                        class="btn btn-success btn-sm"
+                                        disabled="@(string.IsNullOrWhiteSpace(job.BackupFilePath) || job.Status == "Running")">
+                                    Verify Backup
+                                </button>
+                            </form>
+                            <!-- Send a POST request to restore this backup. -->
+                            <form asp-action="RestoreBackup"
+                                asp-route-id="@job.Id"
+                                method="post"
+                                class="mt-2">
+
+                                <button type="submit"
+                                        class="btn btn-warning btn-sm"
+                                        disabled="@(string.IsNullOrWhiteSpace(job.BackupFilePath) || job.Status == "Running")">
+                                    Restore Backup
                                 </button>
                             </form>
                         </td>
